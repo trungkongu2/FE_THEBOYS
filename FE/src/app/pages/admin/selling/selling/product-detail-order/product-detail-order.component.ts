@@ -2,11 +2,6 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from "@angular/material/dialog";
 import { SellingComponent } from "../selling.component";
 import { SellingService } from "../../../../../shared/service/selling/selling.service";
-import { logging } from "protractor";
-import { quantity } from "chartist";
-import { Constant } from "../../../../../shared/constants/Constant";
-import { FormControl } from "@angular/forms";
-import { ProductDetailService } from '../../../../../shared/service/productDetail/product-detail.service';
 import { ToastrService } from 'ngx-toastr';
 
 @Component({
@@ -19,7 +14,6 @@ export class ProductDetailOrderComponent implements OnInit {
     constructor(private matDialogRef: MatDialogRef<SellingComponent>,
         private toastrService: ToastrService,
         private sellingService: SellingService,
-        private productDetailService: ProductDetailService,
         @Inject(MAT_DIALOG_DATA) public dataDialog?: any
     ) {
     }
@@ -83,7 +77,7 @@ export class ProductDetailOrderComponent implements OnInit {
         this.colorSelected = item;
         this.quantityInventory = 0;
         this.productDetail = {};
-        this.productDetailService.getSizeByProductId(this.dataDialog.product.id, this.colorSelected).subscribe({
+        this.sellingService.getSizeByProductId(this.dataDialog.product.id, this.colorSelected).subscribe({
             next: res => {
                 this.listSizeOfProduct = res;
             }
@@ -95,7 +89,7 @@ export class ProductDetailOrderComponent implements OnInit {
         this.sizeSelected = item;
         console.log(this.sizeSelected);
         console.log(this.colorSelected);
-        this.productDetailService.getByColorAndSize(this.colorSelected, this.sizeSelected).subscribe({
+        this.sellingService.getByColorAndSize(this.colorSelected, this.sizeSelected).subscribe({
             next: res => {
                 console.log(res);
                 this.productDetail = res;
@@ -106,7 +100,7 @@ export class ProductDetailOrderComponent implements OnInit {
     }
 
     getAllSizeAndColor() {
-        this.productDetailService.getColorByProductId(this.dataDialog.product.id).subscribe({
+        this.sellingService.getColorByProductId(this.dataDialog.product.id).subscribe({
             next: res => {
                 this.listColorOfProduct = res;
                 console.log(this.listColorOfProduct);

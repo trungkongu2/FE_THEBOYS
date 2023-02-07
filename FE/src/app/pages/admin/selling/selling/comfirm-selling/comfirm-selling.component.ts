@@ -21,7 +21,7 @@ export class ComfirmSellingComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.dataDialog.order == null){
-        this.title = 'Xác nhận';
+        this.title = 'Xác nhận thanh toán';
     }else{
       this.title = 'Thông tin đơn hàng'
         this.order = this.dataDialog.order;

@@ -3,6 +3,10 @@ import {JwtHelperService} from '@auth0/angular-jwt';
 
 const USER_TOKEN = 'admin-token';
 
+const USER_ID = 'admin_theboys_id';
+
+const USER_FULLNAME = 'admin_theboys_fullname';
+
 @Injectable({
     providedIn: 'root'
 })
@@ -11,6 +15,38 @@ export class StorageService {
     private jwtHelper = new JwtHelperService();
 
     constructor() {
+    }
+
+    public saveUserSelling(id: any, fullname: any) {
+        window.localStorage.removeItem(USER_ID);
+        window.localStorage.setItem(USER_TOKEN, id);
+        window.localStorage.removeItem(USER_FULLNAME);
+        window.localStorage.setItem(USER_TOKEN, fullname);
+    }
+
+    public getUserFullName(){
+        return window.localStorage.getItem(USER_FULLNAME);
+    }
+
+    public getUserID(){
+        const user_id = window.localStorage.getItem(USER_ID);
+        // console.log(user_id);
+
+        // console.log(window.localStorage.getItem(USER_ID));
+        
+        return user_id;
+    }
+
+    public isLogged() :boolean{
+        const authToken = this.getUserID();
+        console.log(authToken !== null);
+        
+        return authToken !== null;
+    }
+
+    logout() {
+        window.localStorage.removeItem(USER_FULLNAME);
+        window.localStorage.removeItem(USER_ID);
     }
 
     /**Xoá token cũ ở Local Storage và lưu token mới*/

@@ -8,13 +8,13 @@ import {AuthGuard} from './shared/guard/auth.guard';
 const routes: Routes = [
     {
         path: '',
-        redirectTo: 'selling',
+        redirectTo: 'login',
         pathMatch: 'full',
     },
     {
         path: 'selling',
         loadChildren: () => import('./pages/admin/selling/selling.module').then(m => m.SellingModule),
-        // canActivate: [AuthGuard],
+        canActivate: [AuthGuard],
     },
     {
         path: 'login',

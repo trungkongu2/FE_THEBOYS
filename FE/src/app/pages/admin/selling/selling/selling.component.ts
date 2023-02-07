@@ -4,7 +4,6 @@ import {SellingService} from '../../../../shared/service/selling/selling.service
 import {MatDialog} from '@angular/material/dialog';
 import {ProductDetailOrderComponent} from './product-detail-order/product-detail-order.component';
 import {Constant} from '../../../../shared/constants/Constant';
-import {btoa} from 'buffer';
 import {CustomerService} from '../../../../shared/service/customer/customer.service';
 import {BehaviorSubject, finalize, Observable} from 'rxjs';
 import {map, startWith} from 'rxjs/operators';
@@ -24,6 +23,7 @@ import {ComfirmSellingComponent} from './comfirm-selling/comfirm-selling.compone
 import {Regex} from '../../../../shared/validators/Regex';
 import {AuthService} from '../../../../shared/service/auth/auth.service';
 import { CategoryService } from '../../../../shared/service/category/category.service';
+import { SellingApiService } from '../../../../shared/service/selling/selling-api.service';
 
 @Component({
     selector: 'selling',
@@ -39,6 +39,7 @@ export class SellingComponent implements OnInit, OnDestroy {
 
 
     constructor(private sellingService: SellingService,
+                private sellingApiService: SellingApiService,
                 private dialog: MatDialog,
                 private categoryService: CategoryService,
                 private currencyPipe: CurrencyPipe,
@@ -101,7 +102,7 @@ export class SellingComponent implements OnInit, OnDestroy {
         this.getAllProduct();
         setTimeout(() => this.load(), 2000);
         this.getProvince();
-        this.employeeName = this.storageService.getFullNameFromToken();
+        this.employeeName = this.storageService.getUserFullName();
         console.log(this.employeeName);
         
     }
@@ -699,7 +700,7 @@ export class SellingComponent implements OnInit, OnDestroy {
         this.order.freight = this.shippingTotal;
         this.order.discount = status == 0 ? this.discount : 0;
         this.order.checkSelling = status;
-        this.order.employee = this.storageService.getIdFromToken();
+        this.order.employee = this.storageService.getUserID();
         this.dialog.open(ComfirmSellingComponent, {
             width: '35vw',
             disableClose: true,
@@ -709,29 +710,45 @@ export class SellingComponent implements OnInit, OnDestroy {
             }
         }).afterClosed().subscribe(value => {
             if (value == Constant.RESULT_CLOSE_DIALOG.CONFIRM) {
-                this.toast.warning('Đặt hàng sắp thành công')
+                // this.toast.warning('Đặt hàng sắp thành công');
+                // console.log('----------------------order');
+                
+                // console.log(this.order);
+                let addToCart = [];
+                for (let i = 0; i < this.order.orderDetail.length; i++) {
+                    let itemAddToCart = {productId: null, quantity: null};
+                    itemAddToCart.productId = this.order.orderDetail[i].id;
+                    itemAddToCart.quantity = this.order.orderDetail[i].quantity;
+                    addToCart.push(itemAddToCart);
+                }
+                // console.log('---------------add to cart');
+                // console.log(addToCart);
+                // this.removeTab(this.selected.value);
+                
+                
+                
                 // this.isLoading = true;
-                // this.sellingService.paymentSelling(this.order).subscribe({
-                //     next: resp => {
-                //         this.drawer.close();
-                //         this.isLoading = false;
-                //         if (status == 0) {
-                //             this.toast.success('Thành công');
-                //             this.print(resp.data);
-                //         } else {
-                //             this.toast.success('Đặt hàng thành công');
-                //         }
-                //         this.removeTab(this.selected.value);
-                //     },
-                //     error: err => {
-                //         if (err.error?.code == 'LIMIT_QUANTITY') {
-                //             this.toast.error(err.error.message);
-                //             this.resetQuantityInventory();
-                //         } else {
-                //             this.toast.error('Lỗi thanh toán!');
-                //         }
-                //     }
-                // })
+                this.sellingApiService.paymentOffline(this.order.note,this.order.customer, this.order.employee, addToCart).subscribe({
+                    next: resp => {
+                        this.drawer.close();
+                        this.isLoading = false;
+                        if (resp.status) {
+                            this.toast.success('Thành công');
+                            this.print(resp);
+                        } else {
+                            this.toast.success('Đặt hàng thành công');
+                        }
+                        this.removeTab(this.selected.value);
+                    },
+                    error: err => {
+                        if (err.error?.code == 'LIMIT_QUANTITY') {
+                            this.toast.error(err.error.message);
+                            this.resetQuantityInventory();
+                        } else {
+                            this.toast.error('Lỗi thanh toán!');
+                        }
+                    }
+                })
             }
         })
     }
@@ -746,15 +763,15 @@ export class SellingComponent implements OnInit, OnDestroy {
 
 
     print(data) {
-        let customer = this.listCustomers.find(cus => cus.id == data.customer)
+        let customer = data.bill.customer.id;
         const formatter = new Intl.NumberFormat();
         let text = '';
-        data.orderDetail.forEach(od => {
+        data.details.forEach(od => {
             text += `<tr>
-                            <td ><div>${od.name} (${od.nameSize}/${od.nameColor})</div>
+                            <td ><div>${od.product.product.productName} (${od.product.size}/${od.product.color})</div>
                                 <div>${od.quantity}</div></td>
-                            <td style="text-align: center">${formatter.format(od.price)}</td>
-                            <td style="text-align: end">${formatter.format(od.quantity * od.price)}</td>
+                            <td style="text-align: center">${formatter.format(od.unitPrice)}</td>
+                            <td style="text-align: end">${formatter.format(od.total)}</td>
                     </tr>`
         })
         // @ts-ignore
@@ -764,7 +781,7 @@ export class SellingComponent implements OnInit, OnDestroy {
                 field: ' ',
                 displayName: ' '
             }],
-            documentTitle: 'NemPhaSun',
+            documentTitle: 'The Boys',
 
             type: 'html',
             maxWidth: 826,
@@ -775,9 +792,8 @@ export class SellingComponent implements OnInit, OnDestroy {
                     <h2>NemPhaSun</h2> <h3 >HÓA ĐƠN BÁN HÀNG </h3>
                     </div>
                     <div class="info">
-                        <div>Mã hóa đơn: ${data.id}</div>
-                        <div>Khách hàng: ${customer == undefined ? 'Khách lẻ' : customer.fullname}</div>
-                        <div>SĐT: ${customer == undefined ? '--' : customer.phone}</div>
+                        <div>Mã hóa đơn: ${data.bill.id}</div>
+                        <div>Khách hàng: ${customer == 1 ? 'Khách lẻ' : customer}</div>
                     </div>
                     <div >
                         <table class="table">
@@ -801,15 +817,7 @@ export class SellingComponent implements OnInit, OnDestroy {
                             <tbody>
                                 <tr>
                                     <td>Tổng tiền hàng:</td>
-                                    <td>${formatter.format(data.totalPrice)}</td>
-                                </tr>
-                                <tr>
-                                    <td>Chiếu khấu ${data.discount}%:</td>
-                                    <td>${formatter.format(data.totalPrice * data.discount / 100)}</td>
-                                </tr>
-                                <tr>
-                                    <td>Tổng thanh toán:</td>
-                                    <td>${formatter.format(data.totalPrice - (data.totalPrice * data.discount / 100))}</td>
+                                    <td>${formatter.format(data.bill.total)}</td>
                                 </tr>
                             </tbody>     
                         </table>                    
